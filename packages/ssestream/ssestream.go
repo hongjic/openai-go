@@ -63,12 +63,18 @@ func (s *eventStreamDecoder) Next() bool {
 
 	event := ""
 	data := bytes.NewBuffer(nil)
+	comment := false
 
 	for s.scn.Scan() {
 		txt := s.scn.Bytes()
 
-		// Dispatch event on an empty line
+		// An empty line indicates end of event.
 		if len(txt) == 0 {
+			if comment {
+				// do not dispatch comment, ignore it.
+				comment = false
+				continue
+			}
 			s.evt = Event{
 				Type: event,
 				Data: data.Bytes(),
@@ -86,7 +92,8 @@ func (s *eventStreamDecoder) Next() bool {
 
 		switch string(name) {
 		case "":
-			// An empty line in the for ": something" is a comment and should be ignored.
+			// An empty line in the for ": something" is a comment.
+			comment = true
 			continue
 		case "event":
 			event = string(value)
